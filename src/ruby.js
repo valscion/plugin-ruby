@@ -1,6 +1,8 @@
 const printer = require("./printer");
 const parser = require("./parser");
 
+const htmlErb = require("./htmlErb");
+
 /*
  * metadata mostly pulled from linguist and rubocop:
  * https://github.com/github/linguist/blob/master/lib/linguist/languages.yml
@@ -67,13 +69,25 @@ module.exports = {
       interpreters: ["jruby", "macruby", "rake", "rbx", "ruby"],
       linguistLanguageId: 326,
       vscodeLanguageIds: ["ruby"]
+    },
+    {
+      name: "HTML ERB",
+      parsers: ["htmlErb"],
+      extensions: [".html.erb"]
     }
   ],
   parsers: {
-    ruby: parser
+    ruby: parser,
+    htmlErb: {
+      parse: htmlErb.parse,
+      astFormat: "htmlErb"
+    }
   },
   printers: {
-    ruby: printer
+    ruby: printer,
+    htmlErb: {
+      print: htmlErb.print
+    }
   },
   options: {
     rubyArrayLiteral: {
