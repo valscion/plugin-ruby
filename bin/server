@@ -1,0 +1,80 @@
+#!/usr/bin/env ruby
+
+require_relative '../src/parser'
+
+class Prettier::PidFile
+  attr_reader :path
+
+  def initialize(path: '/tmp/prettier-ruby.pid')
+    @path = path
+  end
+
+  def write
+    File.open(path, ::File::CREAT | ::File::EXCL | ::File::WRONLY) do |file|
+      file.write("#{Process.pid}")
+    end
+
+    at_exit { File.delete(path) if File.exists?(path) }
+  rescue Errno::EEXIST
+    check
+    retry
+  end
+
+  def check
+    case status
+    when :running, :not_owned
+      puts "A daemon is already running. Check #{path}."
+      exit(1)
+    when :dead
+      File.delete(path)
+    end
+  end
+
+  def status
+    return :exited unless File.exists?(path)
+
+    pid = ::File.read(path).to_i
+    return :dead if pid == 0
+
+    Process.kill(0, pid)
+    :running
+  rescue Errno::ESRCH
+    :dead
+  rescue Errno::EPERM
+    :not_owned
+  end
+end
+
+$PROGRAM_NAME = 'prettier-ruby'
+
+pidfile = Prettier::PidFile.new
+pidfile.check
+
+Process.daemon
+pidfile.write
+
+quit = false
+trap(:QUIT) { quit = true }
+
+require 'socket'
+server = TCPServer.new(22_020)
+
+loop do
+  Thread.start(server.accept_nonblock) do |socket|
+    source = socket.readpartial(10 * 1024 * 1024)
+
+    builder = Prettier::Parser.new(source)
+    response = builder.parse
+
+    if !response || builder.error?
+      socket.puts('{ "error": true }')
+    else
+      socket.puts(JSON.fast_generate(response))
+    end
+
+    socket.close
+  end
+rescue IO::WaitReadable, Errno::EINTR
+  IO.select([server])
+  retry unless quit
+end
