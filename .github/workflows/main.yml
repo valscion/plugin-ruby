@@ -22,7 +22,14 @@ jobs:
     env:
       PLUGIN_RUBY_CI: true
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout from pull_request_target event
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@master
+        with:
+          ref: ${{ github.sha }}
+      - name: Checkout from push
+        if: github.event_name == 'push'
+        uses: actions/checkout@master
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
