@@ -15,7 +15,7 @@ jobs:
     if: >
       ${{ github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.sender.login == "valscion-alter-ego" }}
+      github.event.sender.login == 'valscion-alter-ego' }}
     steps:
       - name: "Download artifact"
         uses: actions/github-script@v3
